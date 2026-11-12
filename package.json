@@ -1,0 +1,29 @@
+{
+  "name": "signin-service",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Humans of EV member and admin authentication service",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test",
+    "create-admin": "node scripts/createAdmin.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "connect-mongo": "^6.0.0",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.10",
+    "express": "^5.3.0",
+    "express-rate-limit": "^8.7.4",
+    "express-session": "^1.19.0",
+    "helmet": "^8.3.0",
+    "mongoose": "^8.9.5",
+    "nodemailer": "^10.5.0",
+    "uuid": "^11.0.3"
+  },
+  "engines": {
+    "node": ">=20.6"
+  }
+}
