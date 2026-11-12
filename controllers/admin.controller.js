@@ -18,8 +18,7 @@ function publicAdmin(user) {
 }
 
 function adminName(email) {
-  const firstName = email.split("@")[0].slice(0, 60);
-  return { firstName, lastName: "admin", fullName: firstName };
+  return { fullName: email.split("@")[0].slice(0, 60) };
 }
 
 export async function loginAdmin(request, response) {
@@ -45,6 +44,9 @@ export async function acceptAdminInvitation(request, response) {
   const email = normalizeEmail(request.body.email);
   const signupCode = request.body.signupCode;
   const password = validatePassword(request.body.password);
+  if (request.body.confirmPassword !== password) {
+    throw new HttpError(400, "Password and confirm password must match.");
+  }
 
   if (typeof signupCode !== "string" || signupCode.length < 24 || signupCode.length > 100) {
     throw new HttpError(400, "The invitation code is invalid or expired.");
@@ -135,7 +137,7 @@ export async function changeAdminRole(request, response) {
   }
 
   admin.adminRole = role;
-  const adminRoleScopes = new Set(["editor", "publisher", "support"]);
+  const adminRoleScopes = new Set(["editor", "publisher", "supporter"]);
   admin.userScope = [
     ...new Set([
       ...admin.userScope.filter((scope) => !adminRoleScopes.has(scope)),

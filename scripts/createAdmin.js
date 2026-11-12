@@ -82,11 +82,8 @@ async function createOwner() {
     throw new HttpError(409, "An administrator already uses this email.");
   }
 
-  const firstName = email.split("@")[0].slice(0, 60);
   await User.create({
-    firstName,
-    lastName: "admin",
-    fullName: firstName,
+    fullName: email.split("@")[0].slice(0, 60),
     email,
     passwordHash: await hashPassword(password),
     adminRole: "owner",

@@ -11,17 +11,9 @@ import {
 function publicMember(user) {
   return {
     id: user.userId,
-    fullName: user.fullName || [user.firstName, user.lastName].filter(Boolean).join(" "),
+    fullName: user.fullName,
     email: user.email,
     membershipPlan: "Free Member",
-  };
-}
-
-function nameParts(fullName) {
-  const [firstName, ...lastNameParts] = fullName.split(" ");
-  return {
-    firstName,
-    lastName: lastNameParts.join(" ") || firstName,
   };
 }
 
@@ -29,6 +21,9 @@ export async function registerMember(request, response) {
   const email = normalizeEmail(request.body.email);
   const fullName = validateFullName(request.body.fullName);
   const password = validatePassword(request.body.password);
+  if (request.body.confirmPassword !== password) {
+    throw new HttpError(400, "Password and confirm password must match.");
+  }
   const existingUser = await User.findOne({
     email,
     userScope: "supporter",
@@ -41,7 +36,6 @@ export async function registerMember(request, response) {
 
   const passwordHash = await hashPassword(password);
   const user = await User.create({
-    ...nameParts(fullName),
     fullName,
     email,
     passwordHash,

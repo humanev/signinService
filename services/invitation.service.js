@@ -1,70 +1,61 @@
-import AdminInvitation from "../models/adminInvitation.model.js";
+import User from "../models/globalUser.model.js";
 import { sendAdminInvitation } from "./email.service.js";
-import {
-  generateOpaqueToken,
-  hashOneTimeToken,
-} from "./token.service.js";
+import { generateOpaqueToken, hashOneTimeToken } from "./token.service.js";
 import HttpError from "../utils/httpError.js";
 
 const invitationLifetimeMs = 24 * 60 * 60 * 1000;
 
 export async function createAdminInvitation({ email, role, invitedBy }) {
   const code = generateOpaqueToken();
-  const invitation = await AdminInvitation.create({
-    email,
-    role,
-    tokenHash: hashOneTimeToken(code),
-    invitedBy,
-    expiresAt: new Date(Date.now() + invitationLifetimeMs),
+  const now = new Date();
+  const owner = await User.findOne({ userId: invitedBy, adminRole: "owner", isDeleted: false })
+    .select("+adminInvitations.tokenHash");
+  if (!owner) throw new HttpError(404, "The inviting owner account was not found.");
+
+  owner.adminInvitations = owner.adminInvitations.filter((item) =>
+    item.expiresAt > now && item.email !== email);
+  owner.adminInvitations.push({
+    email, role, tokenHash: hashOneTimeToken(code), invitedBy,
+    expiresAt: new Date(now.getTime() + invitationLifetimeMs),
   });
+  await owner.save();
 
   try {
-    await AdminInvitation.deleteMany({
-      email,
-      usedAt: null,
-      _id: { $ne: invitation._id },
-    });
     await sendAdminInvitation({ email, code, role });
   } catch (error) {
-    try {
-      await AdminInvitation.deleteOne({ _id: invitation._id });
-    } catch (cleanupError) {
-      console.error("Could not remove an unsent admin invitation.", {
-        name: cleanupError.name || "Error",
-      });
-    }
+    owner.adminInvitations = owner.adminInvitations.filter((item) => item.email !== email);
+    await owner.save();
     throw error;
   }
 }
 
 export async function consumeAdminInvitation({ email, code }) {
   const now = new Date();
-  const invitation = await AdminInvitation.findOne({
-    email,
-    tokenHash: hashOneTimeToken(code),
-    expiresAt: { $gt: now },
-    usedAt: null,
-  }).select("+tokenHash");
+  const invitationOwner = await User.findOne({
+    adminRole: "owner", isDeleted: false,
+    adminInvitations: { $elemMatch: {
+      email, tokenHash: hashOneTimeToken(code), expiresAt: { $gt: now }, usedAt: null,
+    } },
+  }).select("+adminInvitations.tokenHash");
+  const invitation = invitationOwner?.adminInvitations.find((item) =>
+    item.email === email && item.tokenHash === hashOneTimeToken(code) &&
+    item.usedAt === null && item.expiresAt > now);
+  if (!invitation) throw new HttpError(400, "The invitation code is invalid or expired.");
 
-  if (!invitation) {
-    throw new HttpError(400, "The invitation code is invalid or expired.");
-  }
-
-  const result = await AdminInvitation.updateOne(
-    { _id: invitation._id, usedAt: null, expiresAt: { $gt: now } },
-    { $set: { usedAt: now } },
+  const updated = await User.updateOne(
+    { _id: invitationOwner._id, adminInvitations: { $elemMatch: {
+      _id: invitation._id, usedAt: null, expiresAt: { $gt: now },
+    } } },
+    { $set: { "adminInvitations.$.usedAt": now } },
   );
-  if (result.modifiedCount !== 1) {
-    throw new HttpError(400, "The invitation code is invalid or expired.");
-  }
-
+  if (updated.modifiedCount !== 1) throw new HttpError(400, "The invitation code is invalid or expired.");
   invitation.usedAt = now;
   return invitation;
 }
 
-export function releaseAdminInvitation(invitation) {
-  return AdminInvitation.updateOne(
-    { _id: invitation._id, usedAt: invitation.usedAt },
-    { $set: { usedAt: null } },
+export async function releaseAdminInvitation(invitation) {
+  return User.updateOne(
+    { "adminInvitations._id": invitation._id, "adminInvitations.usedAt": invitation.usedAt },
+    { $set: { "adminInvitations.$.usedAt": null } },
   );
 }

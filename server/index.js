@@ -10,8 +10,6 @@ import {
   sessionCookieOptions,
 } from "../config/session.js";
 import { validateEnvironment } from "../config/env.js";
-import AdminInvitation from "../models/adminInvitation.model.js";
-import RecoveryCode from "../models/recoveryCode.model.js";
 import User from "../models/globalUser.model.js";
 import { verifyCsrfToken } from "../middleware/auth.middleware.js";
 import HttpError from "../utils/httpError.js";
@@ -124,7 +122,7 @@ export function createApp() {
 export async function startServer() {
   validateEnvironment();
   await connectToDatabase();
-  await Promise.all([User.init(), AdminInvitation.init(), RecoveryCode.init()]);
+  await User.init();
 
   const app = createApp();
   const port = Number(process.env.PORT || 5000);

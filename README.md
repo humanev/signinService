@@ -56,9 +56,10 @@ frontend build and configure matching CORS origins.
 - `POST /api/admin/profile/password`
 
 Mutating endpoints require a session-bound CSRF token from `GET /api/auth/csrf`.
-Passwords are hashed with bcrypt. Sessions and one-time codes are stored in
-MongoDB; invitation and recovery codes are stored only as keyed hashes. Recovery
-codes expire after 10 minutes and allow at most five attempts.
+Passwords are hashed with bcrypt. Sessions are stored in MongoDB. Admin
+invitations and recovery codes are embedded in the user collection and stored
+only as keyed hashes. Recovery codes expire after 10 minutes and allow at most
+five attempts.
 
 ## Scope and limitations
 
@@ -71,7 +72,7 @@ production-ready.
 
 - `server.js`, `server/` — API startup and middleware
 - `config/` — database, environment, and session settings
-- `models/` — users, admin invitations, and recovery codes
+- `models/` — the shared member and admin user model
 - `controllers/`, `routes/` — request handling and API routes
 - `middleware/` — session authorization, CSRF, and rate limits
 - `services/` — password, session, email, and one-time-token helpers

@@ -1,7 +1,7 @@
 import HttpError from "./httpError.js";
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const allowedAdminRoles = new Set(["editor", "publisher", "support"]);
+const allowedAdminRoles = new Set(["editor", "publisher", "supporter"]);
 
 export function normalizeEmail(value) {
   if (typeof value !== "string") {

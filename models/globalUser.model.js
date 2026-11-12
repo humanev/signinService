@@ -20,6 +20,24 @@ const addressSchema = new mongoose.Schema(
   { _id: false },
 );
 
+const adminInvitationSchema = new mongoose.Schema({
+  email: { type: String, required: true, lowercase: true, trim: true },
+  role: { type: String, enum: ["editor", "publisher", "supporter"], required: true },
+  tokenHash: { type: String, required: true, select: false },
+  invitedBy: { type: String, required: true },
+  expiresAt: { type: Date, required: true },
+  usedAt: { type: Date, default: null },
+  createdAt: { type: Date, default: Date.now },
+});
+
+const recoverySchema = new mongoose.Schema({
+  codeHash: { type: String, required: true, select: false },
+  expiresAt: { type: Date, required: true },
+  attemptsRemaining: { type: Number, default: 5, min: 0, max: 5 },
+  usedAt: { type: Date, default: null },
+  createdAt: { type: Date, default: Date.now },
+});
+
 const globalUserSchema = new mongoose.Schema(
   {
     userId: {
@@ -38,19 +56,19 @@ const globalUserSchema = new mongoose.Schema(
       index: true,
     },
 
-    firstName: { type: String, required: true, trim: true, lowercase: true },
-    lastName: { type: String, required: true, trim: true, lowercase: true },
-    fullName: { type: String, default: null, trim: true },
+    fullName: { type: String, required: true, trim: true },
     email: { type: String, lowercase: true, trim: true },
     phone: { type: String, sparse: true, index: true },
     passwordHash: { type: String, select: false },
     adminRole: {
       type: String,
-      enum: ["owner", "editor", "publisher", "support"],
+      enum: ["owner", "editor", "publisher", "supporter"],
       default: null,
     },
     authVersion: { type: Number, default: 0, select: false },
     passwordChangedAt: { type: Date, default: null },
+    adminInvitations: { type: [adminInvitationSchema], default: [] },
+    adminRecovery: { type: recoverySchema, default: undefined },
     businessName: { type: String, default: null, trim: true },
     orgDept: { type: String, default: null, trim: true },
 
@@ -63,16 +81,9 @@ const globalUserSchema = new mongoose.Schema(
       type: [String],
       enum: [
         "admin",
-        "issuer",
-        "earner",
-        "vendor",
-        "managing_editor",
-        "reviewer",
-        "author",
         "editor",
         "publisher",
         "supporter",
-        "support",
       ],
       required: true,
       validate: {
